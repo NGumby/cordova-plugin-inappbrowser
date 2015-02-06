@@ -45,10 +45,10 @@ public class InAppBrowserDialog extends Dialog {
     public void onBackPressed () {
         if (this.inAppBrowser == null) {
             this.dismiss();
-        } else {
+        } //else {
             // better to go through the in inAppBrowser
             // because it does a clean up
-            this.inAppBrowser.closeDialog();
-        }
+            //this.inAppBrowser.closeDialog();
+        //}
     }
 }
