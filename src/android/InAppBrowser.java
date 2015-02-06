@@ -89,6 +89,8 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean openWindowHidden = false;
     private boolean clearAllCache= false;
     private boolean clearSessionCache=false;
+    private boolean hadwareBackButton=true;
+    private RelativeLayout toolbar;
 
     /**
      * Executes the request and returns PluginResult.
@@ -407,6 +409,13 @@ public class InAppBrowser extends CordovaPlugin {
     }
 
     /**
+     * Checks to see if it is possible to go forward one page in history, then does so.
+     */
+    private void reload() {
+        this.inAppWebView.reload();
+    }
+
+    /**
      * Navigate to the new page
      *
      * @param url to load
@@ -499,20 +508,24 @@ public class InAppBrowser extends CordovaPlugin {
                 main.setOrientation(LinearLayout.VERTICAL);
 
                 // Toolbar layout
-                RelativeLayout toolbar = new RelativeLayout(cordova.getActivity());
-                //Please, no more black! 
-                toolbar.setBackgroundColor(android.graphics.Color.LTGRAY);
-                toolbar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44)));
-                toolbar.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
-                toolbar.setHorizontalGravity(Gravity.LEFT);
+                toolbar = new RelativeLayout(cordova.getActivity());
+                toolbar.setBackgroundColor(android.graphics.Color.BLACK);
+                toolbar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(36)));
+                toolbar.setPadding(this.dpToPixels(8), this.dpToPixels(2), this.dpToPixels(8), this.dpToPixels(2));
+                toolbar.setHorizontalGravity(Gravity.RIGHT);
                 toolbar.setVerticalGravity(Gravity.TOP);
+				toolbar.setVisibility(View.GONE);
 
                 // Action Button Container layout
                 RelativeLayout actionButtonContainer = new RelativeLayout(cordova.getActivity());
-                actionButtonContainer.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-                actionButtonContainer.setHorizontalGravity(Gravity.LEFT);
+				RelativeLayout.LayoutParams actionButtonLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                actionButtonLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                actionButtonContainer.setLayoutParams(actionButtonLayoutParams);
+                actionButtonContainer.setPadding(this.dpToPixels(8), this.dpToPixels(0), this.dpToPixels(8), this.dpToPixels(0));
+                actionButtonContainer.setHorizontalGravity(Gravity.RIGHT);
                 actionButtonContainer.setVerticalGravity(Gravity.CENTER_VERTICAL);
                 actionButtonContainer.setId(1);
+
 
                 // Back button
                 Button back = new Button(cordova.getActivity());
@@ -522,7 +535,7 @@ public class InAppBrowser extends CordovaPlugin {
                 back.setContentDescription("Back Button");
                 back.setId(2);
                 Resources activityRes = cordova.getActivity().getResources();
-                int backResId = activityRes.getIdentifier("ic_action_previous_item", "drawable", cordova.getActivity().getPackageName());
+                int backResId = activityRes.getIdentifier("ic_action_back", "drawable", cordova.getActivity().getPackageName());
                 Drawable backIcon = activityRes.getDrawable(backResId);
                 if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN)
                 {
@@ -545,7 +558,7 @@ public class InAppBrowser extends CordovaPlugin {
                 forward.setLayoutParams(forwardLayoutParams);
                 forward.setContentDescription("Forward Button");
                 forward.setId(3);
-                int fwdResId = activityRes.getIdentifier("ic_action_next_item", "drawable", cordova.getActivity().getPackageName());
+                int fwdResId = activityRes.getIdentifier("ic_action_refresh", "drawable", cordova.getActivity().getPackageName());
                 Drawable fwdIcon = activityRes.getDrawable(fwdResId);
                 if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN)
                 {
@@ -557,7 +570,7 @@ public class InAppBrowser extends CordovaPlugin {
                 }
                 forward.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        goForward();
+                        reload();
                     }
                 });
 
@@ -648,8 +661,8 @@ public class InAppBrowser extends CordovaPlugin {
 
                 // Add the views to our toolbar
                 toolbar.addView(actionButtonContainer);
-                toolbar.addView(edittext);
-                toolbar.addView(close);
+                //toolbar.addView(edittext);
+                //toolbar.addView(close);
 
                 // Don't add the toolbar if its been disabled
                 if (getShowLocationBar()) {
@@ -661,7 +674,7 @@ public class InAppBrowser extends CordovaPlugin {
                 main.addView(inAppWebView);
 
                 WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-                lp.copyFrom(dialog.getWindow().getAttributes());
+                dialog.getWindow().setGravity(Gravity.TOP|Gravity.RIGHT);
                 lp.width = WindowManager.LayoutParams.MATCH_PARENT;
                 lp.height = WindowManager.LayoutParams.MATCH_PARENT;
 
@@ -809,6 +822,13 @@ public class InAppBrowser extends CordovaPlugin {
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
             
+		if (url.indexOf("app_webview_noheader") != -1){
+			toolbar.setVisibility(View.VISIBLE);
+		}
+		else {
+			toolbar.setVisibility(View.GONE);
+		}
+			
             try {
                 JSONObject obj = new JSONObject();
                 obj.put("type", LOAD_STOP_EVENT);
