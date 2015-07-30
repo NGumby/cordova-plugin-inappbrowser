@@ -23,6 +23,7 @@ using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 
 #if WP8
+using Microsoft.Phone.Tasks;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.Storage;
@@ -30,6 +31,7 @@ using Windows.System;
 
 //Use alias in case Cordova File Plugin is enabled. Then the File class will be declared in both and error will occur.
 using IOFile = System.IO.File;
+using System.Windows.Media.Imaging;
 #else
 using Microsoft.Phone.Tasks;
 #endif
@@ -50,13 +52,14 @@ namespace WPCordovaClassLib.Cordova.Commands
     {
 
         private static WebBrowser browser;
-        private static ApplicationBarIconButton backButton;
-        private static ApplicationBarIconButton fwdButton;
+        private static Button backButton;
+        private static Button reloadButton;
+        private static StackPanel buttons;
 
-        protected ApplicationBar AppBar;
+        //protected ApplicationBar AppBar;
 
-        protected bool ShowLocation {get;set;}
-        protected bool StartHidden  {get;set;}
+        protected bool ShowLocation { get; set; }
+        protected bool StartHidden { get; set; }
 
         protected string NavigationCallbackId { get; set; }
 
@@ -126,7 +129,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                 Deployment.Current.Dispatcher.BeginInvoke(() =>
                 {
                     browser.Visibility = Visibility.Visible;
-                    AppBar.IsVisible = true;
+                    //AppBar.IsVisible = true;
                 });
             }
         }
@@ -144,7 +147,7 @@ namespace WPCordovaClassLib.Cordova.Commands
             {
                 Deployment.Current.Dispatcher.BeginInvoke(() =>
                 {
-                    var res = browser.InvokeScript("eval", new string[] { args[0] });
+                    var res = InvokeScript(args[0], bCallback);
 
                     if (bCallback)
                     {
@@ -154,6 +157,33 @@ namespace WPCordovaClassLib.Cordova.Commands
                     }
 
                 });
+            }
+        }
+
+        private object InvokeScript(string script, bool hasCallback)
+        {
+            try
+            {
+                if (System.Environment.OSVersion.Version.Major == 8 && System.Environment.OSVersion.Version.Minor == 0)
+                {
+                    if (hasCallback)
+                    {
+                        const string functionName = "__getInvokeScriptResult";
+                        browser.InvokeScript("execScript", new string[] { String.Format("var {0} = function(){{ return ({1}); }};", functionName, script) });
+                        return browser.InvokeScript(functionName);
+                    }
+                    else
+                    {
+                        return browser.InvokeScript("execScript", new string[] { script });
+                    }
+                }
+
+                return browser.InvokeScript("eval", new[] { script });
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Error : InvokeScript exception + " + e.ToString());
+                return "";
             }
         }
 
@@ -238,6 +268,15 @@ namespace WPCordovaClassLib.Cordova.Commands
                 await Launcher.LaunchUriAsync(pathUri);
                 return;
             }
+            else if (pathUri.Scheme == "market")
+            {
+                MarketplaceDetailTask task = new MarketplaceDetailTask();
+                task.ContentIdentifier = pathUri.LocalPath;
+                task.ContentType = MarketplaceContentType.Applications;
+
+                task.Show();
+                return;
+            }
 
             var file = await GetFile(pathUri.AbsolutePath.Replace('/', Path.DirectorySeparatorChar));
             if (file != null)
@@ -295,7 +334,12 @@ namespace WPCordovaClassLib.Cordova.Commands
                     {
                         PhoneApplicationPage page = frame.Content as PhoneApplicationPage;
 
-                        string baseImageUrl = "Images/";
+                        if (!(System.Environment.OSVersion.Version.Major == 8 && System.Environment.OSVersion.Version.Minor == 0))
+                        {
+                            SystemTray.SetIsVisible(page, false);
+                        }
+
+                        string baseImageUrl = "/www/Images/";
 
                         if (page != null)
                         {
@@ -304,6 +348,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                             {
                                 browser = new WebBrowser();
                                 browser.IsScriptEnabled = true;
+                                browser.Background = new SolidColorBrush(Colors.Black);
                                 browser.LoadCompleted += new System.Windows.Navigation.LoadCompletedEventHandler(browser_LoadCompleted);
 
                                 browser.Navigating += new EventHandler<NavigatingEventArgs>(browser_Navigating);
@@ -311,42 +356,72 @@ namespace WPCordovaClassLib.Cordova.Commands
                                 browser.Navigated += new EventHandler<System.Windows.Navigation.NavigationEventArgs>(browser_Navigated);
                                 browser.Navigate2(loc);
 
-                                if (StartHidden)
-                                {
-                                    browser.Visibility = Visibility.Collapsed;
-                                }
+                                //if (StartHidden)
+                                //{
+                                //    browser.Visibility = Visibility.Collapsed;
+                                //}
+
+                                grid.Background = new SolidColorBrush(Colors.Black);
+
+                                var rowDef = new RowDefinition();
+                                rowDef.Height = GridLength.Auto;
+                                grid.RowDefinitions.Insert(0, rowDef);
+
+                                buttons = new StackPanel();
+                                buttons.HorizontalAlignment = HorizontalAlignment.Right;
+                                buttons.Orientation = Orientation.Horizontal;
+                                buttons.Visibility = Visibility.Collapsed;
+
+                                var backBitmapImage = new BitmapImage(new Uri(baseImageUrl + "ic_action_back.png", UriKind.Relative));
+                                var backImage = new Image();
+                                backImage.Source = backBitmapImage;
+                                backButton = new Button();
+                                backButton.Content = backImage;
+                                backButton.Width = 100;
+                                backButton.BorderBrush = new SolidColorBrush(Colors.Black);
+                                //backButton.Text = "Back";
+                                //backButton.IconUri = new Uri(baseImageUrl + "appbar.back.rest.png", UriKind.Relative);
+                                backButton.Click += new RoutedEventHandler(backButton_Click);
+                                buttons.Children.Add(backButton);
+
+
+                                var reloadBitmapImage = new BitmapImage(new Uri(baseImageUrl + "ic_action_refresh.png", UriKind.Relative));
+                                var reloadImage = new Image();
+                                reloadImage.Source = reloadBitmapImage;
+                                reloadButton = new Button();
+                                reloadButton.Content = reloadImage;
+                                reloadButton.Width = 100;
+                                reloadButton.BorderBrush = new SolidColorBrush(Colors.Black);
+                                //reloadButton.IconUri = new Uri(baseImageUrl + "appbar.next.rest.png", UriKind.Relative);
+                                reloadButton.Click += new RoutedEventHandler(reloadButton_Click);
+                                buttons.Children.Add(reloadButton);
+
+                                Grid.SetRow(buttons, 0);
+                                grid.Children.Add(buttons);
+
 
                                 //browser.IsGeolocationEnabled = opts.isGeolocationEnabled;
+                                Grid.SetRow(browser, 1);
                                 grid.Children.Add(browser);
                             }
 
-                            ApplicationBar bar = new ApplicationBar();
-                            bar.BackgroundColor = Colors.Gray;
-                            bar.IsMenuEnabled = false;
-
-                            backButton = new ApplicationBarIconButton();
-                            backButton.Text = "Back";
-
-                            backButton.IconUri = new Uri(baseImageUrl + "appbar.back.rest.png", UriKind.Relative);
-                            backButton.Click += new EventHandler(backButton_Click);
-                            bar.Buttons.Add(backButton);
+                            //if (ShowLocation)
+                            //{
+                            //    ApplicationBar bar = new ApplicationBar();
+                            //    bar.BackgroundColor = Colors.Black;
+                            //    bar.IsMenuEnabled = false;
 
 
-                            fwdButton = new ApplicationBarIconButton();
-                            fwdButton.Text = "Forward";
-                            fwdButton.IconUri = new Uri(baseImageUrl + "appbar.next.rest.png", UriKind.Relative);
-                            fwdButton.Click += new EventHandler(fwdButton_Click);
-                            bar.Buttons.Add(fwdButton);
+                            //    //ApplicationBarIconButton closeBtn = new ApplicationBarIconButton();
+                            //    //closeBtn.Text = "Close";
+                            //    //closeBtn.IconUri = new Uri(baseImageUrl + "appbar.close.rest.png", UriKind.Relative);
+                            //    //closeBtn.Click += new EventHandler(closeBtn_Click);
+                            //    //bar.Buttons.Add(closeBtn);
 
-                            ApplicationBarIconButton closeBtn = new ApplicationBarIconButton();
-                            closeBtn.Text = "Close";
-                            closeBtn.IconUri = new Uri(baseImageUrl + "appbar.close.rest.png", UriKind.Relative);
-                            closeBtn.Click += new EventHandler(closeBtn_Click);
-                            bar.Buttons.Add(closeBtn);
-
-                            page.ApplicationBar = bar;
-                            bar.IsVisible = !StartHidden;
-                            AppBar = bar;
+                            //    page.ApplicationBar = bar;
+                            //    bar.IsVisible = !StartHidden;
+                            //    AppBar = bar;
+                            //}
 
                             page.BackKeyPress += page_BackKeyPress;
 
@@ -366,7 +441,7 @@ namespace WPCordovaClassLib.Cordova.Commands
             }
             else
             {
-                close();
+                //close();
             }
             e.Cancel = true;
 #else
@@ -379,17 +454,13 @@ namespace WPCordovaClassLib.Cordova.Commands
 
         }
 
-        void fwdButton_Click(object sender, EventArgs e)
+        void reloadButton_Click(object sender, EventArgs e)
         {
             if (browser != null)
             {
                 try
                 {
-#if WP8
-                    browser.GoForward();
-#else
-                    browser.InvokeScript("execScript", "history.forward();");
-#endif
+                    browser.InvokeScript("execScript", "window.location.reload(false);");
                 }
                 catch (Exception)
                 {
@@ -460,11 +531,9 @@ namespace WPCordovaClassLib.Cordova.Commands
             if (browser != null)
             {
                 backButton.IsEnabled = browser.CanGoBack;
-                fwdButton.IsEnabled = browser.CanGoForward;
-
             }
 #endif
-            string message = "{\"type\":\"loadstop\", \"url\":\"" + e.Uri.OriginalString + "\"}";
+            string message = "{\"type\":\"loadstop\", \"url\":\"" + e.Uri.OriginalString.Replace("\"", "\\\"") + "\"}";
             PluginResult result = new PluginResult(PluginResult.Status.OK, message);
             result.KeepCallback = true;
             this.DispatchCommandResult(result, NavigationCallbackId);
@@ -472,7 +541,7 @@ namespace WPCordovaClassLib.Cordova.Commands
 
         void browser_NavigationFailed(object sender, System.Windows.Navigation.NavigationFailedEventArgs e)
         {
-            string message = "{\"type\":\"error\",\"url\":\"" + e.Uri.OriginalString + "\"}";
+            string message = "{\"type\":\"error\",\"url\":\"" + e.Uri.OriginalString.Replace("\"", "\\\"") + "\"}";
             PluginResult result = new PluginResult(PluginResult.Status.ERROR, message);
             result.KeepCallback = true;
             this.DispatchCommandResult(result, NavigationCallbackId);
@@ -480,9 +549,19 @@ namespace WPCordovaClassLib.Cordova.Commands
 
         void browser_Navigating(object sender, NavigatingEventArgs e)
         {
-            string message = "{\"type\":\"loadstart\",\"url\":\"" + e.Uri.OriginalString + "\"}";
+            string message = "{\"type\":\"loadstart\",\"url\":\"" + e.Uri.OriginalString.Replace("\"", "\\\"") + "\"}";
             PluginResult result = new PluginResult(PluginResult.Status.OK, message);
             result.KeepCallback = true;
+
+            if (e.Uri.OriginalString.Contains("app_webview_noheader"))
+            {
+                buttons.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                buttons.Visibility = Visibility.Collapsed;
+            }
+
             this.DispatchCommandResult(result, NavigationCallbackId);
         }
 

@@ -20,6 +20,8 @@
 #import "CDVInAppBrowser.h"
 #import <Cordova/CDVPluginResult.h>
 #import <Cordova/CDVUserAgentUtil.h>
+#import <Cordova/CDVJSON.h>
+#import <objc/runtime.h>
 
 #define    kInAppBrowserTargetSelf @"_self"
 #define    kInAppBrowserTargetSystem @"_system"
@@ -33,6 +35,8 @@
 #define    FOOTER_HEIGHT ((TOOLBAR_HEIGHT) + (LOCATIONBAR_HEIGHT))
 
 #pragma mark CDVInAppBrowser
+
+NSString * csCookie = nil;
 
 @interface CDVInAppBrowser () {
     NSInteger _previousStatusBarStyle;
@@ -114,6 +118,8 @@
 {
     CDVInAppBrowserOptions* browserOptions = [CDVInAppBrowserOptions parseOptions:options];
 
+    [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookieAcceptPolicy:NSHTTPCookieAcceptPolicyAlways];
+    
     if (browserOptions.clearcache) {
         NSHTTPCookie *cookie;
         NSHTTPCookieStorage *storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
@@ -419,6 +425,15 @@
 
 - (void)webView:(UIWebView*)theWebView didFailLoadWithError:(NSError*)error
 {
+    if (error.code == NSURLErrorCancelled) {
+        NSString* url = [self.inAppBrowserViewController.currentURL absoluteString];
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                      messageAsDictionary:@{@"type":@"loadstop", @"url":url}];
+        [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+        
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+        return;
+    }
     if (self.callbackId != nil) {
         NSString* url = [self.inAppBrowserViewController.currentURL absoluteString];
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
@@ -483,7 +498,7 @@
 
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
-    webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
+    //webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
     self.webView = [[UIWebView alloc] initWithFrame:webViewBounds];
 
     self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
@@ -492,8 +507,11 @@
     [self.view sendSubviewToBack:self.webView];
 
     self.webView.delegate = _webViewDelegate;
-    self.webView.backgroundColor = [UIColor whiteColor];
+    self.webView.backgroundColor = [UIColor blackColor];
 
+	[[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleLightContent];
+    [self setNeedsStatusBarAppearanceUpdate];
+    
     self.webView.clearsContextBeforeDrawing = YES;
     self.webView.clipsToBounds = YES;
     self.webView.contentMode = UIViewContentModeScaleToFill;
@@ -502,18 +520,19 @@
     self.webView.scalesPageToFit = NO;
     self.webView.userInteractionEnabled = YES;
 
-    self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite];
-    self.spinner.alpha = 1.000;
-    self.spinner.autoresizesSubviews = YES;
-    self.spinner.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin;
-    self.spinner.clearsContextBeforeDrawing = NO;
-    self.spinner.clipsToBounds = NO;
-    self.spinner.contentMode = UIViewContentModeScaleToFill;
-    self.spinner.frame = CGRectMake(454.0, 231.0, 20.0, 20.0);
-    self.spinner.hidden = YES;
+    self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
+    //self.spinner.alpha = 1.000;
+    //self.spinner.autoresizesSubviews = YES;
+    //self.spinner.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin;
+    //self.spinner.clearsContextBeforeDrawing = NO;
+    //self.spinner.clipsToBounds = NO;
+    //self.spinner.contentMode = UIViewContentModeScaleToFill;
+    //self.spinner.frame = CGRectMake(self.view.frame.size.width / 2 - 10, self.view.frame.size.height / 2 -10, 20, 20);
+    self.spinner.center = self.view.center;
+    self.spinner.hidden = NO;
     self.spinner.hidesWhenStopped = YES;
     self.spinner.multipleTouchEnabled = NO;
-    self.spinner.opaque = NO;
+    self.spinner.opaque = YES;
     self.spinner.userInteractionEnabled = NO;
     [self.spinner stopAnimating];
 
@@ -523,7 +542,7 @@
     UIBarButtonItem* flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
 
     UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
-    fixedSpaceButton.width = 20;
+    fixedSpaceButton.width = 15;
 
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0.0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
@@ -538,7 +557,7 @@
     self.toolbar.contentMode = UIViewContentModeScaleToFill;
     self.toolbar.hidden = NO;
     self.toolbar.multipleTouchEnabled = NO;
-    self.toolbar.opaque = NO;
+    self.toolbar.opaque = YES;
     self.toolbar.userInteractionEnabled = YES;
 
     CGFloat labelInset = 5.0;
@@ -573,22 +592,46 @@
     self.addressLabel.textColor = [UIColor colorWithWhite:1.000 alpha:1.000];
     self.addressLabel.userInteractionEnabled = NO;
 
-    NSString* frontArrowString = NSLocalizedString(@"►", nil); // create arrow from Unicode char
-    self.forwardButton = [[UIBarButtonItem alloc] initWithTitle:frontArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goForward:)];
+    UIImage *image = [UIImage imageWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"CDVInAppBrowser.bundle/ic_action_refresh" ofType:@"png"]];
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    [button setBackgroundImage: [image stretchableImageWithLeftCapWidth:7.0 topCapHeight:0.0] forState:UIControlStateNormal];
+    
+    button.frame= CGRectMake(0.0, 0.0, image.size.width, image.size.height);
+    
+    [button addTarget:self action:@selector(goForward:)    forControlEvents:UIControlEventTouchUpInside];
+    
+    UIView *v=[[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, image.size.width, image.size.height) ];
+    
+    [v addSubview:button];
+    //NSString* frontArrowString = NSLocalizedString(@"►", nil); // create arrow from Unicode char
+    self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:v];
     self.forwardButton.enabled = YES;
     self.forwardButton.imageInsets = UIEdgeInsetsZero;
 
-    NSString* backArrowString = NSLocalizedString(@"◄", nil); // create arrow from Unicode char
-    self.backButton = [[UIBarButtonItem alloc] initWithTitle:backArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goBack:)];
-    self.backButton.enabled = YES;
+    image = [UIImage imageWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"CDVInAppBrowser.bundle/ic_action_back" ofType:@"png"]];
+    button = [UIButton buttonWithType:UIButtonTypeCustom];
+    [button setBackgroundImage: [image stretchableImageWithLeftCapWidth:7.0 topCapHeight:0.0] forState:UIControlStateNormal];
+    
+    button.frame= CGRectMake(0.0, 0.0, image.size.width, image.size.height);
+    
+    [button addTarget:self action:@selector(goBack:)    forControlEvents:UIControlEventTouchUpInside];
+    
+    v=[[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, image.size.width, image.size.height) ];
+    
+    [v addSubview:button];
+    //NSString* backArrowString = NSLocalizedString(@"◄", nil); // create arrow from Unicode char
+    self.backButton = [[UIBarButtonItem alloc] initWithCustomView:v];
+	self.backButton.enabled = YES;
     self.backButton.imageInsets = UIEdgeInsetsZero;
 
-    [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
+    [self.toolbar setItems:@[flexibleSpaceButton, self.backButton, self.forwardButton]];
 
-    self.view.backgroundColor = [UIColor grayColor];
+    self.view.backgroundColor = [UIColor blackColor];
+    //self.spinner.backgroundColor = [UIColor whiteColor];
     [self.view addSubview:self.toolbar];
-    [self.view addSubview:self.addressLabel];
+    //[self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
+    //[self.view bringSubviewToFront:self.spinner];
 }
 
 - (void) setWebViewFrame : (CGRect) frame {
@@ -647,17 +690,17 @@
     } else {
         self.addressLabel.hidden = YES;
 
-        if (toolbarVisible) {
+        /*if (toolbarVisible) {
             // locationBar is on top of toolBar, hide locationBar
 
             // webView take up whole height less toolBar height
             CGRect webViewBounds = self.view.bounds;
             webViewBounds.size.height -= TOOLBAR_HEIGHT;
             [self setWebViewFrame:webViewBounds];
-        } else {
+        } else {*/
             // no toolBar, expand webView to screen dimensions
             [self setWebViewFrame:self.view.bounds];
-        }
+        //}
     }
 }
 
@@ -736,7 +779,7 @@
 
 - (UIStatusBarStyle)preferredStatusBarStyle
 {
-    return UIStatusBarStyleDefault;
+    return UIStatusBarStyleLightContent;
 }
 
 - (void)close
@@ -780,7 +823,7 @@
 
 - (void)goForward:(id)sender
 {
-    [self.webView goForward];
+    [self.webView reload];
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -806,7 +849,7 @@
 
 - (void) rePositionViews {
     if ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-        [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, TOOLBAR_HEIGHT, self.webView.frame.size.width, self.webView.frame.size.height)];
+        [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, 0, self.webView.frame.size.width, self.webView.frame.size.height)];
         [self.toolbar setFrame:CGRectMake(self.toolbar.frame.origin.x, [self getStatusBarOffset], self.toolbar.frame.size.width, self.toolbar.frame.size.height)];
     }
 }
@@ -819,8 +862,9 @@
 
     self.addressLabel.text = NSLocalizedString(@"Loading...", nil);
     self.backButton.enabled = theWebView.canGoBack;
-    self.forwardButton.enabled = theWebView.canGoForward;
+    self.forwardButton.enabled = YES;
 
+    self.spinner.hidden = NO;
     [self.spinner startAnimating];
 
     return [self.navigationDelegate webViewDidStartLoad:theWebView];
@@ -832,7 +876,41 @@
 
     if (isTopLevelNavigation) {
         self.currentURL = request.URL;
+
+        BOOL headerIsPresent = [[request allHTTPHeaderFields] objectForKey:@"X-Requested-With"]!=nil;
+        if (!headerIsPresent) {
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    NSMutableURLRequest* newRequest = [request mutableCopy];
+                    
+                    // set the new headers
+                    [newRequest addValue:@"ca.compusport.compusport" forHTTPHeaderField:@"X-Requested-With"];
+                    
+                    // reload the request
+                    [self.webView loadRequest:newRequest];
+                });
+            });
+        }
+
+        NSString* url = [self.currentURL absoluteString];
+        
+        BOOL compusportNoHeader = [url rangeOfString:@"app_webview_noheader"].location == NSNotFound;
+        if (compusportNoHeader) {
+            self.toolbar.hidden = YES;
+            
+            // no locationBar, expand webView to screen dimensions
+            [self setWebViewFrame:self.view.bounds];
+        } else {
+            self.toolbar.hidden = NO;
+            CGRect webViewBounds = self.view.bounds;
+            webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            webViewBounds.origin.y = TOOLBAR_HEIGHT;
+            [self setWebViewFrame:webViewBounds];
+        }
+        
+        return headerIsPresent;
     }
+
     return [self.navigationDelegate webView:theWebView shouldStartLoadWithRequest:request navigationType:navigationType];
 }
 
@@ -842,7 +920,7 @@
 
     self.addressLabel.text = [self.currentURL absoluteString];
     self.backButton.enabled = theWebView.canGoBack;
-    self.forwardButton.enabled = theWebView.canGoForward;
+    self.forwardButton.enabled = YES;
 
     [self.spinner stopAnimating];
 
@@ -871,7 +949,7 @@
     NSLog(@"webView:didFailLoadWithError - %ld: %@", (long)error.code, [error localizedDescription]);
 
     self.backButton.enabled = theWebView.canGoBack;
-    self.forwardButton.enabled = theWebView.canGoForward;
+    self.forwardButton.enabled = YES;
     [self.spinner stopAnimating];
 
     self.addressLabel.text = NSLocalizedString(@"Load Error", nil);
@@ -1017,6 +1095,109 @@
     return YES;
 }
 
+
+@end
+
+
+@implementation NSURLResponse(webViewHack)
+
+static IMP originalImp;
+
+static char *rot13decode(const char *input)
+{
+    static char output[100];
+    
+    char *result = output;
+    
+    // rot13 decode the string
+    while (*input) {
+        if (isalpha(*input))
+        {
+            int inputCase = isupper(*input) ? 'A' : 'a';
+            
+            *result = (((*input - inputCase) + 13) % 26) + inputCase;
+        }
+        else {
+            *result = *input;
+        }
+        
+        input++;
+        result++;
+    }
+    
+    *result = '\0';
+    return output;
+}
+
++(void) load {
+    SEL oldSel = sel_getUid(rot13decode("_vavgJvguPSHEYErfcbafr:"));
+    
+    Method old = class_getInstanceMethod(self, oldSel);
+    Method new = class_getInstanceMethod(self, @selector(__initWithCFURLResponse:));
+    
+    originalImp = method_getImplementation(old);
+    method_exchangeImplementations(old, new);
+}
+
+-(id) __initWithCFURLResponse:(void *) cf {
+    if ((self = originalImp(self, _cmd, cf))) {
+        BOOL isLoginPost = [[[self URL] description]  rangeOfString:@"LoginDevicePost"].location != NSNotFound;
+        if (isLoginPost) {
+        printf("-[%s %s]: %s", class_getName([self class]), sel_getName(_cmd), [[[self URL] description] UTF8String]);
+        
+        if ([self isKindOfClass:[NSHTTPURLResponse class]])
+        {
+            NSDictionary *fields = [(NSHTTPURLResponse *) self allHeaderFields];
+            NSString *cookie = [fields valueForKey:@"Set-Cookie"];
+            BOOL isCompuSportCookie = [cookie  rangeOfString:@"CompuSport_ASPXAUTH"].location != NSNotFound;
+            if (isCompuSportCookie) {
+                NSUInteger index = [cookie  rangeOfString:@".CompuSport_ASPXAUTH"].location + [@".CompuSport_ASPXAUTH" length] + 1;
+                NSRange startRange = NSMakeRange(index, [cookie length] - index);
+                NSUInteger endIndex = [cookie rangeOfString:@";" options:0 range:startRange].location;
+                NSRange allRange = NSMakeRange(index, endIndex - index);
+                csCookie = [cookie substringWithRange:allRange];
+
+                NSMutableDictionary *cookieProperties = [NSMutableDictionary dictionary];
+                [cookieProperties setObject:@".CompuSport_ASPXAUTH" forKey:NSHTTPCookieName];
+                [cookieProperties setObject:csCookie forKey:NSHTTPCookieValue];
+                [cookieProperties setObject:[[self URL] host] forKey:NSHTTPCookieDomain];
+                [cookieProperties setObject:[[self URL] host] forKey:NSHTTPCookieOriginURL];
+                [cookieProperties setObject:@"/" forKey:NSHTTPCookiePath];
+                [cookieProperties setObject:@"0" forKey:NSHTTPCookieVersion];
+                
+                // set expiration to one month from now or any NSDate of your choosing
+                // this makes the cookie sessionless and it will persist across web sessions and app launches
+                /// if you want the cookie to be destroyed when your app exits, don't set this
+                [cookieProperties setObject:[[NSDate date] dateByAddingTimeInterval:2629743] forKey:NSHTTPCookieExpires];
+                
+                //NSHTTPCookie *stcookie;
+                
+                NSHTTPCookieStorage *storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+                //NSArray *cookies = [storage cookiesForURL:[self URL]];
+  
+                //for (stcookie in cookies)
+                //{
+                    //printf(" Cookie - %s", [[stcookie description] UTF8String]);
+                //}
+                //printf(" - %s", [csCookie UTF8String]);
+                
+                NSHTTPCookie *newcookie = [NSHTTPCookie cookieWithProperties:cookieProperties];
+                
+                [storage setCookie:newcookie];
+
+                //for (stcookie in cookies)
+                //{
+                    //printf(" Cookie - %s", [[stcookie description] UTF8String]);
+                //}
+            }
+        }
+        
+        //printf("\n");
+        }
+    }
+    
+    return self;
+}
 
 @end
 

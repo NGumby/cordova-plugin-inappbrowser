@@ -83,6 +83,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String CLEAR_ALL_CACHE = "clearcache";
     private static final String CLEAR_SESSION_CACHE = "clearsessioncache";
     private static final String HARDWARE_BACK_BUTTON = "hardwareback";
+    private static final String BACK_CLOSE_EVENT = "backclose";
 
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
@@ -395,7 +396,18 @@ public class InAppBrowser extends CordovaPlugin {
         }
     }
 
-    /**
+
+ 	public void onBackClose() {
+	    try {
+			JSONObject obj = new JSONObject();
+			obj.put("type", BACK_CLOSE_EVENT);
+			sendUpdate(obj, true);
+		} catch (JSONException ex) {
+			Log.d(LOG_TAG, "Should never happen");
+		}
+	}
+	
+	/**
      * Checks to see if it is possible to go back one page in history, then does so.
      */
     public void goBack() {
@@ -661,6 +673,7 @@ public class InAppBrowser extends CordovaPlugin {
 
                 // WebView
                 inAppWebView = new WebView(cordova.getActivity());
+                inAppWebView.setBackgroundColor(android.graphics.Color.BLACK);
                 inAppWebView.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
                 inAppWebView.setWebChromeClient(new InAppChromeClient(thatWebView));
                 WebViewClient client = new InAppBrowserClient(thatWebView, edittext);
