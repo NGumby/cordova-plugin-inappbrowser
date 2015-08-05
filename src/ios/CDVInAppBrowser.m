@@ -56,6 +56,11 @@ NSString * csCookie = nil;
     [self close:nil];
 }
 
+- (void)navigate:(CDVInvokedUrlCommand*)command
+{
+    [self.inAppBrowserViewController navigateTo:[command argumentAtIndex:0]];
+}
+
 - (void)close:(CDVInvokedUrlCommand*)command
 {
     if (self.inAppBrowserViewController == nil) {

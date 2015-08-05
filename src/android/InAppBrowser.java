@@ -242,7 +242,19 @@ public class InAppBrowser extends CordovaPlugin {
             pluginResult.setKeepCallback(true);
             this.callbackContext.sendPluginResult(pluginResult);
         }
-        else {
+        else if (action.equals("navigate")) {
+            final String url = args.getString(0);
+            Log.d(LOG_TAG, "navigate " + url);
+
+            this.cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+					navigate(url);
+			    }
+            });
+        }
+		else {
+            Log.d(LOG_TAG, "invalid action = " + action);
             return false;
         }
         return true;
@@ -406,7 +418,7 @@ public class InAppBrowser extends CordovaPlugin {
 			Log.d(LOG_TAG, "Should never happen");
 		}
 	}
-	
+
 	/**
      * Checks to see if it is possible to go back one page in history, then does so.
      */
@@ -453,7 +465,8 @@ public class InAppBrowser extends CordovaPlugin {
      *
      * @param url to load
      */
-    private void navigate(String url) {
+    public void navigate(String url) {
+        Log.d(LOG_TAG, "navigate to new url");
         InputMethodManager imm = (InputMethodManager)this.cordova.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(edittext.getWindowToken(), 0);
 

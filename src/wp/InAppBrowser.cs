@@ -134,6 +134,21 @@ namespace WPCordovaClassLib.Cordova.Commands
             }
         }
 
+        public void navigate(string options)
+        {
+            string[] args = JSON.JsonHelper.Deserialize<string[]>(options);
+
+            if (browser != null)
+            {
+                Deployment.Current.Dispatcher.BeginInvoke(() =>
+                {
+                    Uri loc = new Uri(args[0], UriKind.RelativeOrAbsolute);
+
+                    browser.Navigate2(loc);
+                });
+            }
+        }
+
         public void injectScriptCode(string options)
         {
             string[] args = JSON.JsonHelper.Deserialize<string[]>(options);
@@ -541,7 +556,8 @@ namespace WPCordovaClassLib.Cordova.Commands
 
         void browser_NavigationFailed(object sender, System.Windows.Navigation.NavigationFailedEventArgs e)
         {
-            string message = "{\"type\":\"error\",\"url\":\"" + e.Uri.OriginalString.Replace("\"", "\\\"") + "\"}";
+            string uri = e.Uri == null ? "" : e.Uri.OriginalString.Replace("\"", "\\\"");
+            string message = "{\"type\":\"error\",\"url\":\"" + uri + "\"}";
             PluginResult result = new PluginResult(PluginResult.Status.ERROR, message);
             result.KeepCallback = true;
             this.DispatchCommandResult(result, NavigationCallbackId);

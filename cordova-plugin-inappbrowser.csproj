@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{85CB17C1-C0D6-45DB-B22E-4AC575130ADD}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <NoStandardLibraries>false</NoStandardLibraries>
+    <AssemblyName>ClassLibrary</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>cordova_plugin_inappbrowser</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include=".travis.yml" />
+    <None Include="CONTRIBUTING.md" />
+    <None Include="doc\de\index.md" />
+    <None Include="doc\es\index.md" />
+    <None Include="doc\fr\index.md" />
+    <None Include="doc\it\index.md" />
+    <None Include="doc\ja\index.md" />
+    <None Include="doc\ko\index.md" />
+    <None Include="doc\pl\index.md" />
+    <None Include="doc\ru\index.md" />
+    <None Include="doc\zh\index.md" />
+    <None Include="package.json" />
+    <None Include="README.md" />
+    <None Include="RELEASENOTES.md" />
+    <None Include="src\blackberry10\README.md" />
+    <None Include="src\ios\CDVInAppBrowser.m" />
+    <None Include="src\ubuntu\InAppBrowser.qml" />
+    <None Include="tests\resources\local.pdf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="plugin.xml" />
+    <Content Include="src\amazon\InAppBrowser.java" />
+    <Content Include="src\amazon\InAppChromeClient.java" />
+    <Content Include="src\android\InAppBrowser.java" />
+    <Content Include="src\android\InAppBrowserDialog.java" />
+    <Content Include="src\android\InAppChromeClient.java" />
+    <Content Include="src\android\res\drawable-hdpi\ic_action_next_item.png" />
+    <Content Include="src\android\res\drawable-hdpi\ic_action_previous_item.png" />
+    <Content Include="src\android\res\drawable-hdpi\ic_action_remove.png" />
+    <Content Include="src\android\res\drawable-mdpi\ic_action_next_item.png" />
+    <Content Include="src\android\res\drawable-mdpi\ic_action_previous_item.png" />
+    <Content Include="src\android\res\drawable-mdpi\ic_action_remove.png" />
+    <Content Include="src\android\res\drawable-xhdpi\ic_action_next_item.png" />
+    <Content Include="src\android\res\drawable-xhdpi\ic_action_previous_item.png" />
+    <Content Include="src\android\res\drawable-xhdpi\ic_action_remove.png" />
+    <Content Include="src\android\res\drawable-xxhdpi\ic_action_next_item.png" />
+    <Content Include="src\android\res\drawable-xxhdpi\ic_action_previous_item.png" />
+    <Content Include="src\android\res\drawable-xxhdpi\ic_action_remove.png" />
+    <Content Include="src\browser\InAppBrowserProxy.js" />
+    <Content Include="src\firefoxos\InAppBrowserProxy.js" />
+    <Content Include="src\ios\CDVInAppBrowser.bundle\ic_action_back%402x.png" />
+    <Content Include="src\ios\CDVInAppBrowser.bundle\ic_action_back%403x.png" />
+    <Content Include="src\ios\CDVInAppBrowser.bundle\ic_action_back.png" />
+    <Content Include="src\ios\CDVInAppBrowser.bundle\ic_action_refresh%402x.png" />
+    <Content Include="src\ios\CDVInAppBrowser.bundle\ic_action_refresh%403x.png" />
+    <Content Include="src\ios\CDVInAppBrowser.bundle\ic_action_refresh.png" />
+    <Content Include="src\ios\CDVInAppBrowser.h" />
+    <Content Include="src\ubuntu\close.png" />
+    <Content Include="src\ubuntu\inappbrowser.cpp" />
+    <Content Include="src\ubuntu\inappbrowser.h" />
+    <Content Include="src\ubuntu\InAppBrowser_escapeScript.js" />
+    <Content Include="src\windows\InAppBrowserProxy.js" />
+    <Content Include="tests\plugin.xml" />
+    <Content Include="tests\resources\inject.css" />
+    <Content Include="tests\resources\inject.html" />
+    <Content Include="tests\resources\inject.js" />
+    <Content Include="tests\resources\local.html" />
+    <Content Include="tests\resources\video.html" />
+    <Content Include="tests\tests.js" />
+    <Content Include="www\inappbrowser.css" />
+    <Content Include="www\inappbrowser.js" />
+    <Content Include="www\windows8\InAppBrowserProxy.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="src\wp\InAppBrowser.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include=".git\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSHARP.Targets" />
+  <ProjectExtensions>
+    <VisualStudio AllowExistingFolder="true" />
+  </ProjectExtensions>
+</Project>
