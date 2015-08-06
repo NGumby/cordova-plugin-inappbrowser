@@ -58,7 +58,8 @@ NSString * csCookie = nil;
 
 - (void)navigate:(CDVInvokedUrlCommand*)command
 {
-    [self.inAppBrowserViewController navigateTo:[command argumentAtIndex:0]];
+    NSURL *url = [[NSURL alloc] initWithString:[command argumentAtIndex:0]];
+    [self.inAppBrowserViewController navigateTo:url];
 }
 
 - (void)close:(CDVInvokedUrlCommand*)command
@@ -1067,6 +1068,15 @@ NSString * csCookie = nil;
     UIToolbar* bgToolbar = [[UIToolbar alloc] initWithFrame:frame];
     bgToolbar.barStyle = UIBarStyleDefault;
     [self.view addSubview:bgToolbar];
+
+    if (NSFoundationVersionNumber <= NSFoundationVersionNumber_iOS_6_1){
+
+    }
+    else {
+        UIView *view=[[UIView alloc] initWithFrame:CGRectMake(0, 0,[UIScreen mainScreen].bounds.size.width, 20)];
+        view.backgroundColor=[UIColor blackColor];
+        [self.view addSubview:view];
+    }
 
     [super viewDidLoad];
 }
