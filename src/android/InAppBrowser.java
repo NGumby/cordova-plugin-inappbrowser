@@ -410,6 +410,8 @@ public class InAppBrowser extends CordovaPlugin {
 
 
  	public void onBackClose() {
+        Log.d(LOG_TAG, "onBackClose");
+
 	    try {
 			JSONObject obj = new JSONObject();
 			obj.put("type", BACK_CLOSE_EVENT);
