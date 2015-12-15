@@ -185,7 +185,7 @@
             <clobbers target="window.open" />
         </js-module>
         <js-module src="www/windows8/InAppBrowserProxy.js" name="InAppBrowserProxy">
-            <merges target="" />
+            <merges target="inappbrowser" />
         </js-module>
     </platform>
 
