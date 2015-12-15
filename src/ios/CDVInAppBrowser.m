@@ -226,30 +226,36 @@ NSString * csCookie = nil;
 
     _previousStatusBarStyle = [UIApplication sharedApplication].statusBarStyle;
 
-    CDVInAppBrowserNavigationController* nav = [[CDVInAppBrowserNavigationController alloc]
+    __block CDVInAppBrowserNavigationController* nav = [[CDVInAppBrowserNavigationController alloc]
                                    initWithRootViewController:self.inAppBrowserViewController];
     nav.orientationDelegate = self.inAppBrowserViewController;
     nav.navigationBarHidden = YES;
+
+    __weak CDVInAppBrowser* weakSelf = self;
+
     // Run later to avoid the "took a long time" log message.
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (self.inAppBrowserViewController != nil) {
-            [self.viewController presentViewController:nav animated:YES completion:nil];
+        if (weakSelf.inAppBrowserViewController != nil) {
+            [weakSelf.viewController presentViewController:nav animated:YES completion:nil];
         }
     });
 }
 
 - (void)openInCordovaWebView:(NSURL*)url withOptions:(NSString*)options
 {
-    if ([self.commandDelegate URLIsWhitelisted:url]) {
         NSURLRequest* request = [NSURLRequest requestWithURL:url];
+
 #ifdef __CORDOVA_4_0_0
+    // the webview engine itself will filter for this according to <allow-navigation> policy
+    // in config.xml for cordova-ios-4.0
         [self.webViewEngine loadRequest:request];
 #else
+    if ([self.commandDelegate URLIsWhitelisted:url]) {
         [self.webView loadRequest:request];
-#endif
     } else { // this assumes the InAppBrowser can be excepted from the white-list
         [self openInInAppBrowser:url withOptions:options];
     }
+#endif
 }
 
 - (void)openInSystem:(NSURL*)url
@@ -272,11 +278,8 @@ NSString * csCookie = nil;
 
 - (void)injectDeferredObject:(NSString*)source withWrapper:(NSString*)jsWrapper
 {
-    if (!_injectedIframeBridge) {
-        _injectedIframeBridge = YES;
-        // Create an iframe bridge in the new document to communicate with the CDVInAppBrowserViewController
-        [self.inAppBrowserViewController.webView stringByEvaluatingJavaScriptFromString:@"(function(d){var e = _cdvIframeBridge = d.createElement('iframe');e.style.display='none';d.body.appendChild(e);})(document)"];
-    }
+    // Ensure an iframe bridge is created to communicate with the CDVInAppBrowserViewController
+    [self.inAppBrowserViewController.webView stringByEvaluatingJavaScriptFromString:@"(function(d){_cdvIframeBridge=d.getElementById('_cdvIframeBridge');if(!_cdvIframeBridge) {var e = _cdvIframeBridge = d.createElement('iframe');e.id='_cdvIframeBridge'; e.style.display='none';d.body.appendChild(e);}})(document)"];
 
     if (jsWrapper != nil) {
         NSData* jsonData = [NSJSONSerialization dataWithJSONObject:@[source] options:0 error:nil];
@@ -413,7 +416,6 @@ NSString * csCookie = nil;
 
 - (void)webViewDidStartLoad:(UIWebView*)theWebView
 {
-    _injectedIframeBridge = NO;
 }
 
 - (void)webViewDidFinishLoad:(UIWebView*)theWebView
@@ -465,7 +467,9 @@ NSString * csCookie = nil;
     self.inAppBrowserViewController = nil;
 
     if (IsAtLeastiOSVersion(@"7.0")) {
+        if (_previousStatusBarStyle != -1) {
         [[UIApplication sharedApplication] setStatusBarStyle:_previousStatusBarStyle];
+    }
     }
 
     _previousStatusBarStyle = -1; // this value was reset before reapplying it. caused statusbar to stay black on ios7
@@ -496,6 +500,11 @@ NSString * csCookie = nil;
     }
 
     return self;
+}
+
+// Prevent crashes on closing windows
+-(void)dealloc {
+   self.webView.delegate = nil;
 }
 
 - (void)createViews
@@ -533,7 +542,7 @@ NSString * csCookie = nil;
     //self.spinner.clearsContextBeforeDrawing = NO;
     //self.spinner.clipsToBounds = NO;
     //self.spinner.contentMode = UIViewContentModeScaleToFill;
-    //self.spinner.frame = CGRectMake(self.view.frame.size.width / 2 - 10, self.view.frame.size.height / 2 -10, 20, 20);
+    //self.spinner.frame = CGRectMake(CGRectGetMidX(self.webView.frame), CGRectGetMidY(self.webView.frame), 20.0, 20.0);
     self.spinner.center = self.view.center;
     self.spinner.hidden = NO;
     self.spinner.hidesWhenStopped = YES;
@@ -627,7 +636,7 @@ NSString * csCookie = nil;
     [v addSubview:button];
     //NSString* backArrowString = NSLocalizedString(@"◄", nil); // create arrow from Unicode char
     self.backButton = [[UIBarButtonItem alloc] initWithCustomView:v];
-	self.backButton.enabled = YES;
+    self.backButton.enabled = YES;
     self.backButton.imageInsets = UIEdgeInsetsZero;
 
     [self.toolbar setItems:@[flexibleSpaceButton, self.backButton, self.forwardButton]];
@@ -797,12 +806,14 @@ NSString * csCookie = nil;
         [self.navigationDelegate browserExit];
     }
 
+    __weak UIViewController* weakSelf = self;
+
     // Run later to avoid the "took a long time" log message.
     dispatch_async(dispatch_get_main_queue(), ^{
-        if ([self respondsToSelector:@selector(presentingViewController)]) {
-            [[self presentingViewController] dismissViewControllerAnimated:YES completion:nil];
+        if ([weakSelf respondsToSelector:@selector(presentingViewController)]) {
+            [[weakSelf presentingViewController] dismissViewControllerAnimated:YES completion:nil];
         } else {
-            [[self parentViewController] dismissViewControllerAnimated:YES completion:nil];
+            [[weakSelf parentViewController] dismissViewControllerAnimated:YES completion:nil];
         }
     });
 }
@@ -814,10 +825,11 @@ NSString * csCookie = nil;
     if (_userAgentLockToken != 0) {
         [self.webView loadRequest:request];
     } else {
+        __weak CDVInAppBrowserViewController* weakSelf = self;
         [CDVUserAgentUtil acquireLock:^(NSInteger lockToken) {
             _userAgentLockToken = lockToken;
             [CDVUserAgentUtil setUserAgent:_userAgent lockToken:lockToken];
-            [self.webView loadRequest:request];
+            [weakSelf.webView loadRequest:request];
         }];
     }
 }
@@ -912,7 +924,7 @@ NSString * csCookie = nil;
             webViewBounds.size.height -= TOOLBAR_HEIGHT;
             webViewBounds.origin.y = TOOLBAR_HEIGHT;
             [self setWebViewFrame:webViewBounds];
-        }
+    }
         
         return headerIsPresent;
     }
