@@ -925,8 +925,10 @@ NSString * csCookie = nil;
             webViewBounds.origin.y = TOOLBAR_HEIGHT;
             [self setWebViewFrame:webViewBounds];
     }
-        
-        return headerIsPresent;
+		if (headerIsPresent == NO)   
+			return NO;
+		else
+			return [self.navigationDelegate webView:theWebView shouldStartLoadWithRequest:request navigationType:navigationType];
     }
 
     return [self.navigationDelegate webView:theWebView shouldStartLoadWithRequest:request navigationType:navigationType];
