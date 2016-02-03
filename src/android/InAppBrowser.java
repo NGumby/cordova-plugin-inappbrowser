@@ -702,10 +702,12 @@ public class InAppBrowser extends CordovaPlugin {
                 inAppWebView.setWebChromeClient(new InAppChromeClient(thatWebView));
                 WebViewClient client = new InAppBrowserClient(thatWebView, edittext);
                 inAppWebView.setWebViewClient(client);
+				inAppWebView.setVerticalScrollBarEnabled(false);
                 WebSettings settings = inAppWebView.getSettings();
                 settings.setJavaScriptEnabled(true);
                 settings.setJavaScriptCanOpenWindowsAutomatically(true);
-                settings.setBuiltInZoomControls(getShowZoomControls());
+                settings.setBuiltInZoomControls(true);
+				settings.setDisplayZoomControls(getShowZoomControls());
                 settings.setPluginState(android.webkit.WebSettings.PluginState.ON);
 
                 //Toggle whether this is enabled or not!
