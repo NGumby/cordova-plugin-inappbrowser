@@ -30,11 +30,10 @@ var cordova = require('cordova'),
 
 var browserWrap,
     popup,
-    navigationButtonsDiv,
-    navigationButtonsDivInner,
+    compusportDiv,
+    compusportDivInner,
     backButton,
-    forwardButton,
-    closeButton,
+    reloadButton,
     bodyOverflowStyle;
 
 // x-ms-webview is available starting from Windows 8.1 (platformId is 'windows')
@@ -44,36 +43,50 @@ var isWebViewAvailable = cordova.platformId == 'windows';
 function attachNavigationEvents(element, callback) {
     if (isWebViewAvailable) {
         element.addEventListener("MSWebViewNavigationStarting", function (e) {
-            callback({ type: "loadstart", url: e.uri}, {keepCallback: true} );
+            callback({ type: "loadstart", url: e.uri }, { keepCallback: true });
+
+            if (e.uri.indexOf("app_webview_noheader") != -1) {
+                popup.style.height = "calc(100% - 60px)";
+                compusportDiv.style.display = "block";
+            } else {
+                popup.style.height = "100%";
+                compusportDiv.style.display = "none";
+            }
         });
 
         element.addEventListener("MSWebViewNavigationCompleted", function (e) {
-            callback({ type: e.isSuccess ? "loadstop" : "loaderror", url: e.uri}, {keepCallback: true});
+            callback({ type: e.isSuccess ? "loadstop" : "loaderror", url: e.uri }, { keepCallback: true });
         });
 
         element.addEventListener("MSWebViewUnviewableContentIdentified", function (e) {
             // WebView found the content to be not HTML.
             // http://msdn.microsoft.com/en-us/library/windows/apps/dn609716.aspx
-            callback({ type: "loaderror", url: e.uri}, {keepCallback: true});
+            callback({ type: "loaderror", url: e.uri }, { keepCallback: true });
         });
 
         element.addEventListener("MSWebViewContentLoading", function (e) {
-            if (navigationButtonsDiv) {
+            if (compusportDiv) {
                 backButton.disabled = !popup.canGoBack;
-                forwardButton.disabled = !popup.canGoForward;
             }
         });
+
+        WinJS.Application.onbackclick = function () {
+            if (popup.canGoBack)
+                popup.goBack();
+
+            return true;
+        }
     } else {
         var onError = function () {
-            callback({ type: "loaderror", url: this.contentWindow.location}, {keepCallback: true});
+            callback({ type: "loaderror", url: this.contentWindow.location }, { keepCallback: true });
         };
 
         element.addEventListener("unload", function () {
-            callback({ type: "loadstart", url: this.contentWindow.location}, {keepCallback: true});
+            callback({ type: "loadstart", url: this.contentWindow.location }, { keepCallback: true });
         });
 
         element.addEventListener("load", function () {
-            callback({ type: "loadstop", url: this.contentWindow.location}, {keepCallback: true});
+            callback({ type: "loadstop", url: this.contentWindow.location }, { keepCallback: true });
         });
 
         element.addEventListener("error", onError);
@@ -153,82 +166,64 @@ var IAB = {
             popup.style.borderWidth = "0px";
             popup.style.width = "100%";
 
-            browserWrap.appendChild(popup);
-
-            if (features.indexOf("location=yes") !== -1 || features.indexOf("location") === -1) {
-                popup.style.height = "calc(100% - 60px)";
-
-                navigationButtonsDiv = document.createElement("div");
-                navigationButtonsDiv.style.height = "60px";
-                navigationButtonsDiv.style.backgroundColor = "#404040";
-                navigationButtonsDiv.style.zIndex = "999";
-                navigationButtonsDiv.onclick = function (e) {
+            {
+                compusportDiv = document.createElement("div");
+                compusportDiv.style.height = "40px";
+                compusportDiv.style.backgroundColor = "#000";
+                compusportDiv.style.zIndex = "999";
+                compusportDiv.style.display = "none";
+                compusportDiv.onclick = function (e) {
                     e.cancelBubble = true;
                 };
 
-                navigationButtonsDivInner = document.createElement("div");
-                navigationButtonsDivInner.style.paddingTop = "10px";
-                navigationButtonsDivInner.style.height = "50px";
-                navigationButtonsDivInner.style.width = "160px";
-                navigationButtonsDivInner.style.margin = "0 auto";
-                navigationButtonsDivInner.style.backgroundColor = "#404040";
-                navigationButtonsDivInner.style.zIndex = "999";
-                navigationButtonsDivInner.onclick = function (e) {
+                compusportDivInner = document.createElement("div");
+                compusportDivInner.style.paddingTop = "5px";
+                compusportDivInner.style.height = "40px";
+                compusportDivInner.style.position = "absolute";
+                compusportDivInner.style.right = "0";
+                compusportDivInner.style.margin = "0 auto";
+                compusportDivInner.style.backgroundColor = "#000";
+                compusportDivInner.style.zIndex = "999";
+                compusportDivInner.onclick = function (e) {
                     e.cancelBubble = true;
                 };
 
 
-                backButton = document.createElement("button");
-                backButton.style.width = "40px";
-                backButton.style.height = "40px";
-                backButton.style.borderRadius = "40px";
+                backButton = document.createElement("div");
+                backButton.style.width = "35px";
+                backButton.style.height = "35px";
+                backButton.style.right = "45px";
+                backButton.style.position = "absolute";
+                backButton.style.backgroundImage = "url(/images/ic_action_back.png)";
+                backButton.style.backgroundSize = "cover";
 
-                backButton.innerText = "<-";
                 backButton.addEventListener("click", function (e) {
                     if (popup.canGoBack)
                         popup.goBack();
                 });
 
-                forwardButton = document.createElement("button");
-                forwardButton.style.marginLeft = "20px";
-                forwardButton.style.width = "40px";
-                forwardButton.style.height = "40px";
-                forwardButton.style.borderRadius = "40px";
+                reloadButton = document.createElement("div");
+                reloadButton.style.width = "35px";
+                reloadButton.style.height = "35px";
+                reloadButton.style.right = "10px";
+                reloadButton.style.backgroundSize = "cover";
+                reloadButton.style.position = "absolute";
 
-                forwardButton.innerText = "->";
-                forwardButton.addEventListener("click", function (e) {
-                    if (popup.canGoForward)
-                        popup.goForward();
+                reloadButton.style.backgroundImage = "url(/images/ic_action_refresh.png)";
+                reloadButton.addEventListener("click", function (e) {
+                    popup.refresh();
                 });
 
-                closeButton = document.createElement("button");
-                closeButton.style.marginLeft = "20px";
-                closeButton.style.width = "40px";
-                closeButton.style.height = "40px";
-                closeButton.style.borderRadius = "40px";
+                compusportDivInner.appendChild(backButton);
+                compusportDivInner.appendChild(reloadButton);
+                compusportDiv.appendChild(compusportDivInner);
 
-                closeButton.innerText = "x";
-                closeButton.addEventListener("click", function (e) {
-                    setTimeout(function () {
-                        IAB.close(win);
-                    }, 0);
-                });
-
-                if (!isWebViewAvailable) {
-                    // iframe navigation is not yet supported
-                    backButton.disabled = true;
-                    forwardButton.disabled = true;
-                }
-
-                navigationButtonsDivInner.appendChild(backButton);
-                navigationButtonsDivInner.appendChild(forwardButton);
-                navigationButtonsDivInner.appendChild(closeButton);
-                navigationButtonsDiv.appendChild(navigationButtonsDivInner);
-
-                browserWrap.appendChild(navigationButtonsDiv);
-            } else {
-                popup.style.height = "100%";
+                browserWrap.appendChild(compusportDiv);
             }
+
+            popup.style.height = "100%";
+
+            browserWrap.appendChild(popup);
 
             // start listening for navigation events
             attachNavigationEvents(popup, win);
@@ -240,6 +235,13 @@ var IAB = {
         }
     },
 
+    navigate: function (win, lose, args) {
+        var strUrl = args[0];
+
+        strUrl = strUrl.replace("ms-appx://", "ms-appx-web://");
+        popup.src = strUrl;
+    },
+
     injectScriptCode: function (win, fail, args) {
         var code = args[0],
             hasCallback = args[1];
@@ -247,8 +249,7 @@ var IAB = {
         if (isWebViewAvailable && browserWrap && popup) {
             var op = popup.invokeScriptAsync("eval", code);
             op.oncomplete = function (e) {
-                // return null if event target is unavailable by some reason
-                var result = (e && e.target) ? [e.target.result] : [null];
+                var result = [e.target.result];
                 hasCallback && win(result);
             };
             op.onerror = function () { };
@@ -269,7 +270,7 @@ var IAB = {
             Windows.Storage.StorageFile.getFileFromApplicationUriAsync(uri).done(function (file) {
                 Windows.Storage.FileIO.readTextAsync(file).done(function (code) {
                     var op = popup.invokeScriptAsync("eval", code);
-                    op.oncomplete = function(e) {
+                    op.oncomplete = function (e) {
                         var result = [e.target.result];
                         hasCallback && win(result);
                     };
@@ -308,14 +309,14 @@ var IAB = {
     }
 };
 
-function injectCSS (webView, cssCode, callback) {
+function injectCSS(webView, cssCode, callback) {
     // This will automatically escape all thing that we need (quotes, slashes, etc.)
     var escapedCode = JSON.stringify(cssCode);
     var evalWrapper = "(function(d){var c=d.createElement('style');c.innerHTML=%s;d.head.appendChild(c);})(document)"
         .replace('%s', escapedCode);
 
     var op = webView.invokeScriptAsync("eval", evalWrapper);
-    op.oncomplete = function() {
+    op.oncomplete = function () {
         callback && callback([]);
     };
     op.onerror = function () { };
