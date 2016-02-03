@@ -25,7 +25,6 @@
 
 
 var cordova = require('cordova'),
-    channel = require('cordova/channel'),
     urlutil = require('cordova/urlutil');
 
 var browserWrap,
@@ -34,11 +33,12 @@ var browserWrap,
     compusportDivInner,
     backButton,
     reloadButton,
-    bodyOverflowStyle;
+    bodyOverflowStyle,
+    navigationEventsCallback;
 
 // x-ms-webview is available starting from Windows 8.1 (platformId is 'windows')
 // http://msdn.microsoft.com/en-us/library/windows/apps/dn301831.aspx
-var isWebViewAvailable = cordova.platformId == 'windows';
+var isWebViewAvailable = cordova.platformId === 'windows';
 
 function attachNavigationEvents(element, callback) {
     if (isWebViewAvailable) {
@@ -55,13 +55,17 @@ function attachNavigationEvents(element, callback) {
         });
 
         element.addEventListener("MSWebViewNavigationCompleted", function (e) {
-            callback({ type: e.isSuccess ? "loadstop" : "loaderror", url: e.uri }, { keepCallback: true });
+            if (e.isSuccess) {
+                callback({ type: "loadstop", url: e.uri }, { keepCallback: true });
+            } else {
+                callback({ type: "loaderror", url: e.uri, code: e.webErrorStatus, message: "Navigation failed with error code " + e.webErrorStatus}, { keepCallback: true });
+            }
         });
 
         element.addEventListener("MSWebViewUnviewableContentIdentified", function (e) {
             // WebView found the content to be not HTML.
             // http://msdn.microsoft.com/en-us/library/windows/apps/dn609716.aspx
-            callback({ type: "loaderror", url: e.uri }, { keepCallback: true });
+            callback({ type: "loaderror", url: e.uri, code: e.webErrorStatus, message: "Navigation failed with error code " + e.webErrorStatus}, { keepCallback: true });
         });
 
         element.addEventListener("MSWebViewContentLoading", function (e) {
@@ -96,8 +100,11 @@ function attachNavigationEvents(element, callback) {
 
 var IAB = {
     close: function (win, lose) {
+        setImmediate(function () {
         if (browserWrap) {
-            if (win) win({ type: "exit" });
+                if (navigationEventsCallback) {
+                    navigationEventsCallback({ type: "exit" });
+                }
 
             browserWrap.parentNode.removeChild(browserWrap);
             // Reset body overflow style to initial value
@@ -105,17 +112,24 @@ var IAB = {
             browserWrap = null;
             popup = null;
         }
+        });
     },
     show: function (win, lose) {
+        setImmediate(function () {
         if (browserWrap) {
             browserWrap.style.display = "block";
         }
+        });
     },
     open: function (win, lose, args) {
+        // make function async so that we can add navigation events handlers before view is loaded and navigation occured
+        setImmediate(function () {
         var strUrl = args[0],
             target = args[1],
             features = args[2],
             url;
+
+            navigationEventsCallback = win;
 
         if (target === "_system") {
             url = new Windows.Foundation.Uri(strUrl);
@@ -144,7 +158,7 @@ var IAB = {
 
                 browserWrap.onclick = function () {
                     setTimeout(function () {
-                        IAB.close(win);
+                            IAB.close(navigationEventsCallback);
                     }, 0);
                 };
 
@@ -219,30 +233,34 @@ var IAB = {
                 compusportDiv.appendChild(compusportDivInner);
 
                 browserWrap.appendChild(compusportDiv);
-            }
+                }
 
-            popup.style.height = "100%";
+                popup.style.height = "100%";
 
             browserWrap.appendChild(popup);
 
             // start listening for navigation events
-            attachNavigationEvents(popup, win);
+                attachNavigationEvents(popup, navigationEventsCallback);
 
             if (isWebViewAvailable) {
                 strUrl = strUrl.replace("ms-appx://", "ms-appx-web://");
             }
             popup.src = strUrl;
         }
+        });
     },
 
     navigate: function (win, lose, args) {
-        var strUrl = args[0];
+        setImmediate(function () {
+            var strUrl = args[0];
 
-        strUrl = strUrl.replace("ms-appx://", "ms-appx-web://");
-        popup.src = strUrl;
+            strUrl = strUrl.replace("ms-appx://", "ms-appx-web://");
+            popup.src = strUrl;
+        });
     },
 
     injectScriptCode: function (win, fail, args) {
+        setImmediate(function () {
         var code = args[0],
             hasCallback = args[1];
 
@@ -255,9 +273,11 @@ var IAB = {
             op.onerror = function () { };
             op.start();
         }
+        });
     },
 
     injectScriptFile: function (win, fail, args) {
+        setImmediate(function () {
         var filePath = args[0],
             hasCallback = args[1];
 
@@ -279,18 +299,22 @@ var IAB = {
                 });
             });
         }
+        });
     },
 
     injectStyleCode: function (win, fail, args) {
+        setImmediate(function () {
         var code = args[0],
             hasCallback = args[1];
 
         if (isWebViewAvailable && browserWrap && popup) {
             injectCSS(popup, code, hasCallback && win);
         }
+        });
     },
 
     injectStyleFile: function (win, fail, args) {
+        setImmediate(function () {
         var filePath = args[0],
             hasCallback = args[1];
 
@@ -306,6 +330,7 @@ var IAB = {
                 // no-op, just catch an error
             });
         }
+        });
     }
 };
 
