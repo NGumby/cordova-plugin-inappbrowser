@@ -86,6 +86,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String CLEAR_SESSION_CACHE = "clearsessioncache";
     private static final String HARDWARE_BACK_BUTTON = "hardwareback";
     private static final String BACK_CLOSE_EVENT = "backclose";
+    private static final String CUSTOM_EVENT = "customevent";
 
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
@@ -824,6 +825,8 @@ public class InAppBrowser extends CordovaPlugin {
          */
         @Override
         public boolean shouldOverrideUrlLoading(WebView webView, String url) {
+            LOG.d(LOG_TAG, "shouldOverrideUrlLoading:" + url);
+
             if (url.startsWith(WebView.SCHEME_TEL)) {
                 try {
                     Intent intent = new Intent(Intent.ACTION_DIAL);
@@ -874,6 +877,17 @@ public class InAppBrowser extends CordovaPlugin {
                     LOG.e(LOG_TAG, "Error sending sms " + url + ":" + e.toString());
                 }
             }
+            else if (url.startsWith("compusportapp:")) {
+				try {
+					JSONObject obj = new JSONObject();
+					obj.put("type", CUSTOM_EVENT);
+					obj.put("url", url);
+					sendUpdate(obj, true);
+	                return true;
+				} catch (JSONException ex) {
+					LOG.e(LOG_TAG, "URI passed in has caused a JSON error.");
+				}
+            }
             return false;
         }
 
@@ -914,7 +928,6 @@ public class InAppBrowser extends CordovaPlugin {
                 LOG.e(LOG_TAG, "URI passed in has caused a JSON error.");
             }
         }
-
 
 
         public void onPageFinished(WebView view, String url) {
