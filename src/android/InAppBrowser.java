@@ -41,6 +41,7 @@ import android.view.WindowManager.LayoutParams;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
+import android.webkit.CookieSyncManager;
 import android.webkit.HttpAuthHandler;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -87,6 +88,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String HARDWARE_BACK_BUTTON = "hardwareback";
     private static final String BACK_CLOSE_EVENT = "backclose";
     private static final String CUSTOM_EVENT = "customevent";
+    private static final String MEDIA_PLAYBACK_REQUIRES_USER_ACTION = "mediaPlaybackRequiresUserAction";
 
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
@@ -99,6 +101,7 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean clearSessionCache=false;
     private boolean hadwareBackButton=true;
     private RelativeLayout toolbar;
+    private boolean mediaPlaybackRequiresUserGesture = false;
 
     /**
      * Executes the request and returns PluginResult.
@@ -203,7 +206,7 @@ public class InAppBrowser extends CordovaPlugin {
         else if (action.equals("injectScriptCode")) {
             String jsWrapper = null;
             if (args.getBoolean(1)) {
-                jsWrapper = String.format("prompt(JSON.stringify([eval(%%s)]), 'gap-iab://%s')", callbackContext.getCallbackId());
+                jsWrapper = String.format("(function(){prompt(JSON.stringify([eval(%%s)]), 'gap-iab://%s')})()", callbackContext.getCallbackId());
             }
             injectDeferredObject(args.getString(0), jsWrapper);
         }
@@ -381,11 +384,11 @@ public class InAppBrowser extends CordovaPlugin {
             @Override
             public void run() {
                 final WebView childView = inAppWebView;
-        // The JS protects against multiple calls, so this should happen only when
-        // closeDialog() is called by other native code.
-        if (childView == null) {
-            return;
-        }
+                // The JS protects against multiple calls, so this should happen only when
+                // closeDialog() is called by other native code.
+                if (childView == null) {
+                    return;
+                }
 
                 childView.setWebViewClient(new WebViewClient() {
                     // NB: wait for about:blank before dismissing
@@ -401,14 +404,14 @@ public class InAppBrowser extends CordovaPlugin {
                 // http://developer.android.com/guide/webapps/migrating.html#Threads
                 childView.loadUrl("about:blank");
 
-        try {
-            JSONObject obj = new JSONObject();
-            obj.put("type", EXIT_EVENT);
-            sendUpdate(obj, false);
-        } catch (JSONException ex) {
-            Log.d(LOG_TAG, "Should never happen");
-        }
-    }
+                try {
+                    JSONObject obj = new JSONObject();
+                    obj.put("type", EXIT_EVENT);
+                    sendUpdate(obj, false);
+                } catch (JSONException ex) {
+                    Log.d(LOG_TAG, "Should never happen");
+                }
+            }
         });
     }
 
@@ -518,6 +521,8 @@ public class InAppBrowser extends CordovaPlugin {
         showLocationBar = true;
         showZoomControls = true;
         openWindowHidden = false;
+        mediaPlaybackRequiresUserGesture = false;
+
         if (features != null) {
             Boolean show = features.get(LOCATION);
             if (show != null) {
@@ -534,6 +539,10 @@ public class InAppBrowser extends CordovaPlugin {
             Boolean hardwareBack = features.get(HARDWARE_BACK_BUTTON);
             if (hardwareBack != null) {
                 hadwareBackButton = hardwareBack.booleanValue();
+            }
+            Boolean mediaPlayback = features.get(MEDIA_PLAYBACK_REQUIRES_USER_ACTION);
+            if (mediaPlayback != null) {
+                mediaPlaybackRequiresUserGesture = mediaPlayback.booleanValue();
             }
             Boolean cache = features.get(CLEAR_ALL_CACHE);
             if (cache != null) {
@@ -710,6 +719,20 @@ public class InAppBrowser extends CordovaPlugin {
                 settings.setBuiltInZoomControls(true);
 				settings.setDisplayZoomControls(getShowZoomControls());
                 settings.setPluginState(android.webkit.WebSettings.PluginState.ON);
+
+                if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                    settings.setMediaPlaybackRequiresUserGesture(mediaPlaybackRequiresUserGesture);
+                }
+
+                String overrideUserAgent = preferences.getString("OverrideUserAgent", null);
+                String appendUserAgent = preferences.getString("AppendUserAgent", null);
+                
+                if (overrideUserAgent != null) {
+                    settings.setUserAgentString(overrideUserAgent);
+                }
+                if (appendUserAgent != null) {
+                    settings.setUserAgentString(settings.getUserAgentString() + appendUserAgent);
+                }
 
                 //Toggle whether this is enabled or not!
                 Bundle appSettings = cordova.getActivity().getIntent().getExtras();
@@ -917,7 +940,7 @@ public class InAppBrowser extends CordovaPlugin {
             // Update the UI if we haven't already
             if (!newloc.equals(edittext.getText().toString())) {
                 edittext.setText(newloc);
-            }
+             }
 
             try {
                 JSONObject obj = new JSONObject();
@@ -932,6 +955,13 @@ public class InAppBrowser extends CordovaPlugin {
 
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
+
+            // CB-10395 InAppBrowser's WebView not storing cookies reliable to local device storage
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                CookieManager.getInstance().flush();
+            } else {
+                CookieSyncManager.getInstance().sync();
+            }
 
 		if (url.indexOf("app_webview_noheader") != -1){
 			toolbar.setVisibility(View.VISIBLE);
@@ -1001,4 +1031,3 @@ public class InAppBrowser extends CordovaPlugin {
         }
     }
 }
-
