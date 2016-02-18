@@ -54,8 +54,8 @@
         show: function (eventname) {
             exec(null, null, "InAppBrowser", "show", []);
         },
-        navigate: function (url) {
-            exec(null, null, "InAppBrowser", "navigate", [url]);
+        navigate: function (url, external) {
+            exec(null, null, "InAppBrowser", "navigate", [url, external]);
         },
         addEventListener: function (eventname, f) {
             if (eventname in this.channels) {

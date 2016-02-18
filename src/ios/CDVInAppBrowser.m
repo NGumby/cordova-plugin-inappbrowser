@@ -59,7 +59,14 @@ NSString * csCookie = nil;
 - (void)navigate:(CDVInvokedUrlCommand*)command
 {
     NSURL *url = [[NSURL alloc] initWithString:[command argumentAtIndex:0]];
-    [self.inAppBrowserViewController navigateTo:url];
+    NSNumber *external = [command argumentAtIndex:1];
+    
+    if ([external boolValue]) {
+        [self openInSystem:url];
+    } else {
+        [self.inAppBrowserViewController navigateTo:url];
+    }
+    
 }
 
 - (void)close:(CDVInvokedUrlCommand*)command

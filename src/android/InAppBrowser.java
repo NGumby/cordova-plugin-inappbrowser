@@ -250,12 +250,14 @@ public class InAppBrowser extends CordovaPlugin {
         }
         else if (action.equals("navigate")) {
             final String url = args.getString(0);
+			final boolean external = args.getBoolean(1);
+
             Log.d(LOG_TAG, "navigate " + url);
 
             this.cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-					navigate(url);
+					navigate(url, external);
 			    }
             });
         }
@@ -469,22 +471,30 @@ public class InAppBrowser extends CordovaPlugin {
         this.inAppWebView.reload();
     }
 
+    public void navigate(String url) {
+		navigate(url, false);
+	}
     /**
      * Navigate to the new page
      *
      * @param url to load
      */
-    public void navigate(String url) {
-        Log.d(LOG_TAG, "navigate to new url");
+    public void navigate(String url, boolean external) {
+        Log.d(LOG_TAG, "navigate to new url " + external + " " + url);
         InputMethodManager imm = (InputMethodManager)this.cordova.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(edittext.getWindowToken(), 0);
 
-        if (!url.startsWith("http") && !url.startsWith("file:")) {
-            this.inAppWebView.loadUrl("http://" + url);
-        } else {
-            this.inAppWebView.loadUrl(url);
-        }
-        this.inAppWebView.requestFocus();
+        if (external) {
+			openExternal(url);
+		} 
+		else{
+			if (!url.startsWith("http") && !url.startsWith("file:")) {
+				this.inAppWebView.loadUrl("http://" + url);
+			} else {
+				this.inAppWebView.loadUrl(url);
+			}
+			this.inAppWebView.requestFocus();
+		}
     }
 
 
