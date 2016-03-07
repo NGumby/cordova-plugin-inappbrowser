@@ -858,7 +858,7 @@ public class InAppBrowser extends CordovaPlugin {
          */
         @Override
         public boolean shouldOverrideUrlLoading(WebView webView, String url) {
-            LOG.d(LOG_TAG, "shouldOverrideUrlLoading:" + url);
+            LOG.e(LOG_TAG, "shouldOverrideUrlLoading:" + url);
 
             if (url.startsWith(WebView.SCHEME_TEL)) {
                 try {
@@ -916,6 +916,7 @@ public class InAppBrowser extends CordovaPlugin {
 					obj.put("type", CUSTOM_EVENT);
 					obj.put("url", url);
 					sendUpdate(obj, true);
+		            LOG.e(LOG_TAG, "shouldOverrideUrlLoading: CUSTOM_EVENT");
 	                return true;
 				} catch (JSONException ex) {
 					LOG.e(LOG_TAG, "URI passed in has caused a JSON error.");
@@ -934,6 +935,10 @@ public class InAppBrowser extends CordovaPlugin {
          */
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
+			if (url.startsWith("compusportapp:")) {
+                LOG.e(LOG_TAG, "on page started compusportapp.");
+				return;
+			}
             super.onPageStarted(view, url, favicon);
             String newloc = "";
             if (url.startsWith("http:") || url.startsWith("https:") || url.startsWith("file:")) {

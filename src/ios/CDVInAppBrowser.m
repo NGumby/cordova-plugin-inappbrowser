@@ -62,7 +62,10 @@ NSString * csCookie = nil;
     NSNumber *external = [command argumentAtIndex:1];
     
     if ([external boolValue]) {
-        [self openInSystem:url];
+		if([[url scheme] isEqualToString:@"appsettings"] && &UIApplicationOpenSettingsURLString != nil)
+			url = [NSURL URLWithString:UIApplicationOpenSettingsURLString];
+	        
+		[self openInSystem:url];
     } else {
         [self.inAppBrowserViewController navigateTo:url];
     }
@@ -422,6 +425,13 @@ NSString * csCookie = nil;
         [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
 
         [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+        return NO;
+    }
+    else if ((self.callbackId != nil) && [[url scheme] isEqualToString:@"appsettings"]) {
+		if(&UIApplicationOpenSettingsURLString != nil)
+			[[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+		else
+			NSLog(@"UIApplicationOpenSettingsURLString is not available in current iOS version");
         return NO;
     }
 	else if ((self.callbackId != nil) && isTopLevelNavigation) {
