@@ -19,10 +19,8 @@
  *
 */
 
-/*jslint sloppy:true */
-/*global Windows:true, require, document, setTimeout, window, module */
-
-
+/* jslint sloppy:true */
+/* global Windows:true, setImmediate */
 
 var cordova = require('cordova'),
     urlutil = require('cordova/urlutil');
@@ -264,15 +262,18 @@ var IAB = {
         var code = args[0],
             hasCallback = args[1];
 
-        if (isWebViewAvailable && browserWrap && popup) {
-            var op = popup.invokeScriptAsync("eval", code);
-            op.oncomplete = function (e) {
-                var result = [e.target.result];
-                hasCallback && win(result);
-            };
-            op.onerror = function () { };
-            op.start();
-        }
+            if (isWebViewAvailable && browserWrap && popup) {
+                var op = popup.invokeScriptAsync("eval", code);
+                op.oncomplete = function (e) {
+                    if (hasCallback) {
+                        // return null if event target is unavailable by some reason
+                        var result = (e && e.target) ? [e.target.result] : [null];
+                        win(result);
+                    }
+                };
+                op.onerror = function () { };
+                op.start();
+            }
         });
     },
 
@@ -285,20 +286,22 @@ var IAB = {
             filePath = urlutil.makeAbsolute(filePath);
         }
 
-        if (isWebViewAvailable && browserWrap && popup) {
-            var uri = new Windows.Foundation.Uri(filePath);
-            Windows.Storage.StorageFile.getFileFromApplicationUriAsync(uri).done(function (file) {
-                Windows.Storage.FileIO.readTextAsync(file).done(function (code) {
-                    var op = popup.invokeScriptAsync("eval", code);
-                    op.oncomplete = function (e) {
-                        var result = [e.target.result];
-                        hasCallback && win(result);
-                    };
-                    op.onerror = function () { };
-                    op.start();
+            if (isWebViewAvailable && browserWrap && popup) {
+                var uri = new Windows.Foundation.Uri(filePath);
+                Windows.Storage.StorageFile.getFileFromApplicationUriAsync(uri).done(function (file) {
+                    Windows.Storage.FileIO.readTextAsync(file).done(function (code) {
+                        var op = popup.invokeScriptAsync("eval", code);
+                        op.oncomplete = function(e) {
+                            if (hasCallback) {
+                                var result = [e.target.result];
+                                win(result);
+                            }
+                        };
+                        op.onerror = function () { };
+                        op.start();
+                    });
                 });
-            });
-        }
+            }
         });
     },
 
@@ -341,8 +344,10 @@ function injectCSS(webView, cssCode, callback) {
         .replace('%s', escapedCode);
 
     var op = webView.invokeScriptAsync("eval", evalWrapper);
-    op.oncomplete = function () {
-        callback && callback([]);
+    op.oncomplete = function() {
+        if (callback) {
+            callback([]);
+        }
     };
     op.onerror = function () { };
     op.start();
