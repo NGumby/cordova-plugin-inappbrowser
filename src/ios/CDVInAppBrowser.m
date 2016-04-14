@@ -20,7 +20,6 @@
 #import "CDVInAppBrowser.h"
 #import <Cordova/CDVPluginResult.h>
 #import <Cordova/CDVUserAgentUtil.h>
-#import <Cordova/CDVJSON.h>
 #import <objc/runtime.h>
 
 #define    kInAppBrowserTargetSelf @"_self"
