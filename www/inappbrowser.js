@@ -54,6 +54,9 @@
         show: function (eventname) {
             exec(null, null, "InAppBrowser", "show", []);
         },
+        hide: function (eventname) {
+            exec(null, null, "InAppBrowser", "hide", []);
+        },
         navigate: function (url, external) {
             exec(null, null, "InAppBrowser", "navigate", [url, external]);
         },
