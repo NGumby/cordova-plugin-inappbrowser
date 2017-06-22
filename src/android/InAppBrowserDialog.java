@@ -24,6 +24,7 @@ import android.content.Context;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.apache.cordova.LOG;
 
 /**
  * Created by Oliver on 22/11/2013.
