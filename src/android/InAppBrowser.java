@@ -268,7 +268,7 @@ public class InAppBrowser extends CordovaPlugin {
             final String url = args.getString(0);
 			final boolean external = args.getBoolean(1);
 
-            Log.d(LOG_TAG, "navigate " + url);
+            LOG.d(LOG_TAG, "navigate " + url);
 
             this.cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
@@ -289,7 +289,7 @@ public class InAppBrowser extends CordovaPlugin {
             this.callbackContext.sendPluginResult(pluginResult);
         }
         else {
-            Log.d(LOG_TAG, "invalid action = " + action);
+            LOG.d(LOG_TAG, "invalid action = " + action);
             return false;
         }
         return true;
@@ -480,14 +480,14 @@ public class InAppBrowser extends CordovaPlugin {
 
 
  	public void onBackClose() {
-        Log.d(LOG_TAG, "onBackClose");
+        LOG.d(LOG_TAG, "onBackClose");
 
 	    try {
 			JSONObject obj = new JSONObject();
 			obj.put("type", BACK_CLOSE_EVENT);
 			sendUpdate(obj, true);
 		} catch (JSONException ex) {
-			Log.d(LOG_TAG, "Should never happen");
+			LOG.d(LOG_TAG, "Should never happen");
 		}
 	}
 
@@ -541,7 +541,7 @@ public class InAppBrowser extends CordovaPlugin {
      * @param url to load
      */
     public void navigate(String url, boolean external) {
-        Log.d(LOG_TAG, "navigate to new url " + external + " " + url);
+        LOG.d(LOG_TAG, "navigate to new url " + external + " " + url);
         InputMethodManager imm = (InputMethodManager)this.cordova.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(edittext.getWindowToken(), 0);
 
