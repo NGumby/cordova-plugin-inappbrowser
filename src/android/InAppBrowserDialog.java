@@ -45,7 +45,7 @@ public class InAppBrowserDialog extends Dialog {
         if (this.inAppBrowser == null) {
             this.dismiss();
         } else {
-	            Log.d("InAppBrowser", "goBack = " + this.inAppBrowser.hardwareBack());
+	            LOG.d("InAppBrowser", "goBack = " + this.inAppBrowser.hardwareBack());
 
             // better to go through the in inAppBrowser
             // because it does a clean up
