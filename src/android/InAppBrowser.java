@@ -447,7 +447,16 @@ public class InAppBrowser extends CordovaPlugin {
                 childView.setWebViewClient(new WebViewClient() {
                     // NB: wait for about:blank before dismissing
                     public void onPageFinished(WebView view, String url) {
-                        if (dialog != null) {
+					    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+							if (cordova.getActivity().isDestroyed()) { // or call isFinishing() if min sdk version < 17
+								return;
+							}
+						} else {
+							if (cordova.getActivity().isFinishing()) { // or call isFinishing() if min sdk version < 17
+								return;
+							}
+						}
+                        if (dialog != null && dialog.isShowing()) {
                             dialog.dismiss();
                             dialog = null;
                         }
