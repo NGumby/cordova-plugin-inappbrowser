@@ -692,11 +692,11 @@ public class InAppBrowser extends CordovaPlugin {
                 actionButtonContainer.setVerticalGravity(Gravity.CENTER_VERTICAL);
                 actionButtonContainer.setId(Integer.valueOf(1));
 
-
                 // Back button
                 ImageButton back = new ImageButton(cordova.getActivity());
                 RelativeLayout.LayoutParams backLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
                 backLayoutParams.addRule(RelativeLayout.ALIGN_LEFT);
+				backLayoutParams.setMargins(0,0,this.dpToPixels(20),0);
                 back.setLayoutParams(backLayoutParams);
                 back.setContentDescription("Back Button");
                 back.setId(Integer.valueOf(2));
@@ -708,7 +708,7 @@ public class InAppBrowser extends CordovaPlugin {
                 else
                     back.setBackgroundDrawable(null);
                 back.setImageDrawable(backIcon);
-                back.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                back.setScaleType(ImageView.ScaleType.CENTER);
                 back.setPadding(0, this.dpToPixels(10), 0, this.dpToPixels(10));
                 if (Build.VERSION.SDK_INT >= 16)
                     back.getAdjustViewBounds();
@@ -733,7 +733,7 @@ public class InAppBrowser extends CordovaPlugin {
                 else
                     forward.setBackgroundDrawable(null);
                 forward.setImageDrawable(fwdIcon);
-                forward.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                forward.setScaleType(ImageView.ScaleType.CENTER);
                 forward.setPadding(0, this.dpToPixels(10), 0, this.dpToPixels(10));
                 if (Build.VERSION.SDK_INT >= 16)
                     forward.getAdjustViewBounds();
