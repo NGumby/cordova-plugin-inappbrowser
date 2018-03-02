@@ -291,19 +291,19 @@ NSString * csCookie = nil;
     dispatch_async(dispatch_get_main_queue(), ^{
         if (self.inAppBrowserViewController != nil) {
             _previousStatusBarStyle = -1;
-            [self.viewController dismissViewControllerAnimated:YES completion:nil];
+            [self.inAppBrowserViewController.presentingViewController dismissViewControllerAnimated:YES completion:nil];
         }
     });
 }
 
 - (void)openInCordovaWebView:(NSURL*)url withOptions:(NSString*)options
 {
-        NSURLRequest* request = [NSURLRequest requestWithURL:url];
+    NSURLRequest* request = [NSURLRequest requestWithURL:url];
 
 #ifdef __CORDOVA_4_0_0
     // the webview engine itself will filter for this according to <allow-navigation> policy
     // in config.xml for cordova-ios-4.0
-        [self.webViewEngine loadRequest:request];
+    [self.webViewEngine loadRequest:request];
 #else
     if ([self.commandDelegate URLIsWhitelisted:url]) {
         [self.webView loadRequest:request];
@@ -542,8 +542,8 @@ NSString * csCookie = nil;
 
     if (IsAtLeastiOSVersion(@"7.0")) {
         if (_previousStatusBarStyle != -1) {
-        [[UIApplication sharedApplication] setStatusBarStyle:_previousStatusBarStyle];
-    }
+            [[UIApplication sharedApplication] setStatusBarStyle:_previousStatusBarStyle];
+        }
     }
 
     _previousStatusBarStyle = -1; // this value was reset before reapplying it. caused statusbar to stay black on ios7
@@ -950,6 +950,17 @@ NSString * csCookie = nil;
     }
 }
 
+// Helper function to convert hex color string to UIColor
+// Assumes input like "#00FF00" (#RRGGBB).
+// Taken from https://stackoverflow.com/questions/1560081/how-can-i-create-a-uicolor-from-a-hex-string
+- (UIColor *)colorFromHexString:(NSString *)hexString {
+    unsigned rgbValue = 0;
+    NSScanner *scanner = [NSScanner scannerWithString:hexString];
+    [scanner setScanLocation:1]; // bypass '#' character
+    [scanner scanHexInt:&rgbValue];
+    return [UIColor colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0 green:((rgbValue & 0xFF00) >> 8)/255.0 blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
+}
+
 #pragma mark UIWebViewDelegate
 
 - (void)webViewDidStartLoad:(UIWebView*)theWebView
@@ -1168,15 +1179,6 @@ NSString * csCookie = nil;
     [bgToolbar setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
     [self.view addSubview:bgToolbar];
 
-    if (NSFoundationVersionNumber <= NSFoundationVersionNumber_iOS_6_1){
-
-    }
-    else {
-        UIView *view=[[UIView alloc] initWithFrame:CGRectMake(0, 0,[UIScreen mainScreen].bounds.size.width, 20)];
-        view.backgroundColor=[UIColor blackColor];
-        [self.view addSubview:view];
-    }
-
     [super viewDidLoad];
 }
 
@@ -1326,4 +1328,3 @@ static char *rot13decode(const char *input)
 }
 
 @end
-
